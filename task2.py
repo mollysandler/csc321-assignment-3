@@ -1,55 +1,57 @@
-import hashlib
+from hashlib import sha256
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import pad, unpad
 
-#long parameters from assignment
-q = int("B10B8F96A080E01DDE92DE5EAE5D54EC52C99FBCFB06A3C69A6A9DCA52D23B616073E28675A23D189838EF1E2EE652C013ECB4AEA906112324975C3CD49B83BFACCBDD7D90C4BD7098488E9C219A73724EFFD6FAE5644738FAA31A4FF55BCCC0A151AF5F0DC8B4BD45BF37DF365C1A65E68CFDA76D4DA708DF1FB2BC2E4A4371", 16)
-alpha = int("A4D1CBD5C3FD34126765A442EFB99905F8104DD258AC507FD6406CFF14266D31266FEA1E5C41564B777E690F5504F213160217B4B01B886A5E91547F9E2749F4D7FBD7D3B9A92EE1909D0D2263F80A76A6A24C087A091F531DBF0A0169B6A28AD662A4D18E73AFA32D779D5918D08BC8858F4DCEF97C2A24855E6EEB22B3B2E5", 16)
+def diffie_hellman(p, g, a):
+    # Compute public value (Y)
+    A = pow(g, a, p)
+    return A
 
-#aes encrypt with the libraries
-def aes_encrypt(key, message):
-    cipher = AES.new(key, AES.MODE_CBC, iv=b'1234567890123456')
-    ciphertext = cipher.encrypt(pad(message, AES.block_size))
+def generate_session_key(p, B, a):
+    s = pow(B, a, p)
+    return sha256(str(s).encode()).digest()
+
+def aes_encrypt(key, plaintext):
+    cipher = AES.new(key, AES.MODE_ECB)
+    ciphertext = cipher.encrypt(pad(plaintext.encode(), AES.block_size))
     return ciphertext
 
-#aes decrypt with the libraries
 def aes_decrypt(key, ciphertext):
-    cipher = AES.new(key, AES.MODE_CBC, iv=b'1234567890123456')
+    cipher = AES.new(key, AES.MODE_ECB)
     plaintext = unpad(cipher.decrypt(ciphertext), AES.block_size)
-    return plaintext
+    return plaintext.decode()
 
-def diffie_hellman():
-    #private keys
-    XA = 12345  #alice
-    XB = 67890  #bob
+def main():
+    # Parameters
+    q = 23
+    alpha = 5
+    X_Alice = 6
+    X_Bob = 15
+    message0 = "Hi Bob!"
+    message1 = "Hi Alice!"
+    
+    alpha_mod = q - 1 
 
-    #pubilc keys
-    YA = pow(alpha, XA, q) #alice
-    YB = pow(alpha, XB, q) #bob
 
-    #shared
-    s_a = pow(YB, XA, q)  #alice
-    s_b = pow(YA, XB, q)  #bob
+    #a computes and sends YA to Bob
+    Y_Alice = diffie_hellman(q, alpha, X_Alice)
+    #b computes and sends YB to Alice
+    Y_Bob = diffie_hellman(q, alpha_mod, X_Bob)
 
-    #assert s_a == s_b  # Ensure both parties compute the same shared secret
+    #m computes session keys using modified alpha
+    s_Alice = generate_session_key(q, alpha_mod, X_Alice)
+    s_Bob = generate_session_key(q, alpha_mod, X_Bob)
 
-    #get the symmetric key
-    shared_secret = hashlib.sha256(str(s_a).encode()).digest()[:16]
+    key = sha256(str(s_Alice).encode()).digest()
+    ciphertext0 = aes_encrypt(key, message0)
+    ciphertext1 = aes_encrypt(key, message1)
 
-    #sneaky messages teehee
-    message_to_bob = b"Hi Bob!"
-    encrypted_message_to_bob = aes_encrypt(shared_secret, message_to_bob)
+    #decrypts
+    decrypted_message0 = aes_decrypt(key, ciphertext0)
+    decrypted_message1 = aes_decrypt(key, ciphertext1)
 
-    message_to_alice = b"Hi Alice!"
-    encrypted_message_to_alice = aes_encrypt(shared_secret, message_to_alice)
+    print("Decrypted message 0:", decrypted_message0)
+    print("Decrypted message 1:", decrypted_message1)
 
-    decrypted_message_to_bob = aes_decrypt(shared_secret, encrypted_message_to_bob)
-    decrypted_message_to_alice = aes_decrypt(shared_secret, encrypted_message_to_alice)
-
-    print("Encrypted message to Bob:", encrypted_message_to_bob)
-    print("Decrypted message from Bob:", decrypted_message_to_bob.decode())
-    print("Encrypted message to Alice:", encrypted_message_to_alice)
-    print("Decrypted message from Alice:", decrypted_message_to_alice.decode())
-
-#main to run the program
-diffie_hellman()
+if __name__ == "__main__":
+    main()
