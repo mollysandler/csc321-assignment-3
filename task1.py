@@ -22,27 +22,17 @@ def diffie_hellman():
     #private keys
     XA = 12345  #alice
     XB = 67890  #bob
-
     #pubilc keys
-    YA = pow(alpha, XA, q) #alice
     YB = pow(alpha, XB, q) #bob
-
     #shared
-    s_a = pow(YB, XA, q)  #alice
-    s_b = pow(YA, XB, q)  #bob
-
-    #assert s_a == s_b  # Ensure both parties compute the same shared secret
-
+    s_a = pow(YB, XA, q) #alice
     #get the symmetric key
     shared_secret = hashlib.sha256(str(s_a).encode()).digest()[:16]
-
     #sneaky messages teehee
     message_to_bob = b"Hi Bob!"
     encrypted_message_to_bob = aes_encrypt(shared_secret, message_to_bob)
-
     message_to_alice = b"Hi Alice!"
     encrypted_message_to_alice = aes_encrypt(shared_secret, message_to_alice)
-
     decrypted_message_to_bob = aes_decrypt(shared_secret, encrypted_message_to_bob)
     decrypted_message_to_alice = aes_decrypt(shared_secret, encrypted_message_to_alice)
 
